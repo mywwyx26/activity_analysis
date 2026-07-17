@@ -1,3 +1,7 @@
+# Folders with large information
+raw data/
+registered/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
