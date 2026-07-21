@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 input_folder = 'C:\\Users\\megan\\flies\\activity_analysis\\avg'
 inputs = [os.path.join(input_folder, f) for f in sorted(os.listdir(input_folder)) if f.endswith(".tif")]
-output = 'clahe'
+output = 'clahe_binarize'
 os.makedirs(output, exist_ok=True)
 
 fig, axes = plt.subplots(3,len(inputs))
@@ -27,5 +27,6 @@ for i in range(len(inputs)):
 
     filename = os.path.splitext(os.path.basename(inputs[i]))[0]
     np.save(os.path.join(output, f'{filename}_clahe.npy'), clahe_image)
+    np.save(os.path.join(output, f'{filename}_binarized.npy'), binarized)
 
 plt.show()
