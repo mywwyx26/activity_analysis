@@ -115,7 +115,7 @@ if __name__ == "__main__":
     tif_videos = [f'{input_folder}\\registered\\{f}' for f in sorted(os.listdir(f'{input_folder}\\registered')) if f.endswith(".tif")]
     avg_images = [f'{input_folder}\\avg\\{f}' for f in sorted(os.listdir(f'{input_folder}\\avg')) if f.endswith(".tif")]
     clahe_images = [f'{input_folder}\\clahe_binarize\\{f}' for f in sorted(os.listdir(f'{input_folder}\\clahe_binarize')) if f.endswith("clahe.npy")]
-    binarized = [f'{input_folder}\\clahe_binarize\\{f}' for f in sorted(os.listdir(f'{input_folder}\\clahe_binarize')) if f.endswith("binarized.npy")]
+    binarized_masks = [f'{input_folder}\\clahe_binarize\\{f}' for f in sorted(os.listdir(f'{input_folder}\\clahe_binarize')) if f.endswith("binarized.npy")]
     neuropil_masks = [f'{input_folder}\\neuropils\\{f}' for f in sorted(os.listdir(f'{input_folder}\\neuropils')) if f.endswith(".tif")]
 
     os.makedirs('outputs', exist_ok=True)
@@ -123,27 +123,27 @@ if __name__ == "__main__":
     fig1, ax1 = plt.subplots(4, 1, figsize=(16,8), sharex=True, sharey=True)
     fig2, ax2 = plt.subplots(4, 1, figsize=(16,8), sharex=True, sharey=True)
     fig3, ax3 = plt.subplots(4, 1, figsize=(16,8), sharex=True, sharey=True)
-    count = 0
-    for video_path, avg_path, clahe_path, bin_path, neuropil_path in zip(tif_videos, avg_images, clahe_images, binarized, neuropil_masks):
-        data = tifffile.imread(video_path)
-        avg_data = tifffile.imread(avg_path)
-        clahe_image = np.load(clahe_path)
-        binarized_mask1 = np.load(bin_path)
-        neuropils = tifffile.imread(neuropil_path)
 
-        title = os.path.splitext(os.path.basename(video_path))[0]
+    for i in range(4):
+        data = tifffile.imread(tif_videos[i])
+        avg_data = tifffile.imread(avg_images[i])
+        clahe_image = np.load(clahe_images[i])
+        binarized = np.load(binarized_masks[i])
+        neuropils = tifffile.imread(neuropil_masks[i])
+
+        title = os.path.splitext(os.path.basename(tif_videos[i]))[0]
 
         total = np.mean(data, axis=(1,2))
         total = (total - np.median(total)) / np.median(total)
-        ax1[count].plot(total)
-        ax1[count].set_title(title)
+        ax1[i].plot(total)
+        ax1[i].set_title(title)
 
         label_to_name = label_neuropils(neuropils)
         traces = neuropil_traces(data, neuropils, label_to_name)
         for name, dff in traces.items():
-            ax2[count].plot(dff, label=name)
-        ax2[count].set_title(title)
-        ax2[count].legend()
+            ax2[i].plot(dff, label=name)
+        ax2[i].set_title(title)
+        ax2[i].legend()
 
         # quadrant activity, one figure per video
         cell_traces = grid_traces(data, n=4)
@@ -152,13 +152,11 @@ if __name__ == "__main__":
         plt.close(quad_fig)
 
         # binarized threshold: bright vs dark activity
-        bright, dark = binarized_traces(data, binarized_mask1)
-        ax3[count].plot(bright, label='bright')
-        ax3[count].plot(dark, label='dark')
-        ax3[count].set_title(title)
-        ax3[count].legend()
-
-        count += 1
+        bright, dark = binarized_traces(data, binarized)
+        ax3[i].plot(bright, label='bright')
+        ax3[i].plot(dark, label='dark')
+        ax3[i].set_title(title)
+        ax3[i].legend()
 
     fig1.tight_layout()
     fig1.savefig('outputs/total_activity.svg')
