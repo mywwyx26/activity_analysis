@@ -37,8 +37,18 @@ def pixel_findroi(data, filename, output="clustered"):
 
     deltaf = (valid_traces - f0[:, None]) / f0[:, None]
 
-    # corrcoef and distance matrices
-    corrcoef_matrix = np.corrcoef(deltaf)
+    # remove the shared/global signal component (e.g. a whole-frame stimulus
+    # response present in nearly every pixel) before clustering. Without this,
+    # correlation-based clustering and silhouette scoring are dominated by
+    # whatever large shared event all pixels have in common, making genuinely
+    # different pixels look similar and making "noise" pixels resemble whichever
+    # real cluster the shared component happens to look like.
+    global_trace = np.mean(deltaf, axis=0)                 # (t,) - average across all pixels
+    residual = deltaf - global_trace[None, :]              # local, pixel-specific signal only
+
+    # corrcoef and distance matrices - computed on the residual, not raw deltaf,
+    # so clustering is driven by local differences rather than the shared component
+    corrcoef_matrix = np.corrcoef(residual)
     distance = 1 - corrcoef_matrix
     distance = (distance + distance.T) / 2
     np.fill_diagonal(distance, 0)
@@ -46,7 +56,7 @@ def pixel_findroi(data, filename, output="clustered"):
     # hierarchical clustering
     linkage_matrix = linkage(squareform(distance), method='average')
     cluster_order = leaves_list(linkage_matrix)
-    corrcoef_reordered = np.corrcoef(deltaf[cluster_order])
+    corrcoef_reordered = np.corrcoef(residual[cluster_order])
 
     # find best k using mean silhouette score
     min_clusters = 2
@@ -80,6 +90,7 @@ def pixel_findroi(data, filename, output="clustered"):
 
     noise_threshold = 0.0
     min_cluster_size = 10
+
     per_roi_scores = silhouette_samples(distance, best_raw_labels, metric='precomputed')
     is_noise = per_roi_scores < noise_threshold
 
