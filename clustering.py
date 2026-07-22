@@ -60,9 +60,10 @@ def pixel_findroi(data, filename, output="clustered"):
 
     # find best k using mean silhouette score
     min_clusters = 2
+    max_clusters = 50
     all_scores = {}
 
-    for k in range(min_clusters, int(min(50, np.ceil(num_features / 2)))):
+    for k in range(min_clusters, int(min(max_clusters, np.ceil(num_features / 2)))):
         labels = fcluster(linkage_matrix, t=k, criterion='maxclust') - 1
         if len(np.unique(labels)) < 2:
             continue
@@ -74,7 +75,7 @@ def pixel_findroi(data, filename, output="clustered"):
 
     # find genuine local maxima (peaks that rise meaningfully above surrounding valleys),
     # rather than small noisy wiggles in an overall decreasing trend
-    prominence_threshold = 0.01  # tune this: larger = only very pronounced bumps count
+    prominence_threshold = 0.001  # tune this: larger = only very pronounced bumps count
     peak_idxs, properties = find_peaks(scores_arr, prominence=prominence_threshold)
 
     if len(peak_idxs) > 0:
@@ -89,14 +90,19 @@ def pixel_findroi(data, filename, output="clustered"):
     best_score = all_scores[best_k]
 
     noise_threshold = 0.0
-    min_cluster_size = 10
+    min_cluster_size = 30
 
     per_roi_scores = silhouette_samples(distance, best_raw_labels, metric='precomputed')
     is_noise = per_roi_scores < noise_threshold
 
-    # also mark any pixel belonging to a cluster smaller than min_cluster_size as noise
-    raw_cluster_sizes = np.bincount(best_raw_labels)
-    small_cluster_mask = raw_cluster_sizes[best_raw_labels] < min_cluster_size
+    # size check must use the count of pixels REMAINING after silhouette-noise
+    # removal, not the raw total cluster size -- otherwise a cluster that starts
+    # above min_cluster_size but loses many members to silhouette noise can still
+    # end up with far fewer than min_cluster_size pixels and get displayed as its
+    # own real cluster anyway.
+    non_silhouette_noise = ~is_noise
+    remaining_sizes = np.bincount(best_raw_labels[non_silhouette_noise], minlength=int(best_raw_labels.max()) + 1)
+    small_cluster_mask = remaining_sizes[best_raw_labels] < min_cluster_size
     n_small_cluster_pixels = int((small_cluster_mask & ~is_noise).sum())
     is_noise = is_noise | small_cluster_mask
 
@@ -142,26 +148,29 @@ def pixel_findroi(data, filename, output="clustered"):
     n_active = len(active_real_clusters)
     n_plots = n_active + (1 if noise_count > 0 else 0)
 
-    plt.figure(1, figsize=(20, max(15, n_plots * 0.5)))
+    fig1, axes1 = plt.subplots(n_plots, 1, figsize=(20, max(15, n_plots * 0.5)), sharex=True, sharey=True)
+    if n_plots == 1:
+        axes1 = [axes1]  # keep indexing consistent when there's only one subplot
+
     for plot_pos, real_idx in enumerate(active_real_clusters):
         pixel_indices = np.where(cluster_labels == real_idx)[0]
-        plt.subplot(n_plots, 1, plot_pos + 1)
+        ax = axes1[plot_pos]
         avg_trace = np.mean(deltaf[pixel_indices], axis=0)
-        plt.plot(avg_trace, color=colors[real_idx], linewidth=1.5)
-        plt.ylabel(f'C{plot_pos+1}\n(n={len(pixel_indices)})', fontsize=7, rotation=0, labelpad=35)
+        ax.plot(avg_trace, color=colors[real_idx], linewidth=1.5)
+        ax.set_ylabel(f'C{plot_pos+1}\n(n={len(pixel_indices)})', fontsize=7, rotation=0, labelpad=35)
         is_last = (plot_pos == n_plots - 1)
-        plt.tick_params(labelbottom=is_last)
+        ax.tick_params(labelbottom=is_last)
 
     if noise_count > 0:
         noise_indices = np.where(cluster_labels >= n_real)[0]
-        plt.subplot(n_plots, 1, n_plots)
+        ax = axes1[n_plots - 1]
         avg_trace = np.mean(deltaf[noise_indices], axis=0)
-        plt.plot(avg_trace, color=(0.3, 0.3, 0.3, 1.0), linewidth=1.5)
-        plt.ylabel(f'Noise\n(n={len(noise_indices)})', fontsize=7, rotation=0, labelpad=35)
-        plt.tick_params(labelbottom=True)
+        ax.plot(avg_trace, color=(0.3, 0.3, 0.3, 1.0), linewidth=1.5)
+        ax.set_ylabel(f'Noise\n(n={len(noise_indices)})', fontsize=7, rotation=0, labelpad=35)
+        ax.tick_params(labelbottom=True)
 
-    plt.figure(1).savefig(os.path.join(output, f"{filename}_clusters_over_time.svg"))
-    plt.close(plt.figure(1))
+    fig1.savefig(os.path.join(output, f"{filename}_clusters_over_time.svg"))
+    plt.close(fig1)
 
     # color coded spatial map: map back through valid_indices to original (row, col)
     group_colors = np.zeros((y_size, x_size, 3))
@@ -188,7 +197,7 @@ def pixel_findroi(data, filename, output="clustered"):
 
     # silhouette plots
     fig_sil, axes_sil = plt.subplots(1, 2, figsize=(14, 4))
-    fig_sil.suptitle(f"Silhouette analysis — {filename}", fontsize=11)
+    fig_sil.suptitle(f"Silhouette analysis - {filename}", fontsize=11)
     ks = sorted(all_scores.keys())
     axes_sil[0].plot(ks, [all_scores[k] for k in ks], marker='o', color="steelblue", linewidth=1.5)
     axes_sil[0].axvline(best_k, color="tomato", linewidth=1.2, linestyle="--",
@@ -222,8 +231,7 @@ if __name__ == "__main__":
     os.makedirs('clustered', exist_ok=True)
 
     for i in range(4):
-        data = zoom(gaussian_filter(tifffile.imread(tif_videos[i]), sigma=(0, 1, 1)),
-                    zoom=(1, 0.25, 0.25), order=1, prefilter=True)
+        data = zoom(gaussian_filter(tifffile.imread(tif_videos[i]), sigma=(0, 1, 1)), zoom=(1, 0.25, 0.25), order=1, prefilter=True)
 
         filename = os.path.splitext(os.path.basename(tif_videos[i]))[0]
         pixel_findroi(data, filename=filename, output='clustered')
