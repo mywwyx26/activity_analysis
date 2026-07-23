@@ -1,6 +1,7 @@
-# Folders with large information
-raw data/
-registered/
+# Raw data and registered videos
+/raw data/
+*_registered.tif
+!AVG_*_registered.tif
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

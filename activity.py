@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import tifffile
+from removebg import get_video_folders
 
 def label_neuropils(neuropil_mask):
     """
@@ -112,57 +113,54 @@ def binarized_traces(data, binarized_mask):
 
 if __name__ == "__main__":
     input_folder = "C:\\Users\\megan\\flies\\activity_analysis"
-    tif_videos = [f'{input_folder}\\registered\\{f}' for f in sorted(os.listdir(f'{input_folder}\\registered')) if f.endswith(".tif")]
-    avg_images = [f'{input_folder}\\avg\\{f}' for f in sorted(os.listdir(f'{input_folder}\\avg')) if f.endswith(".tif")]
-    clahe_images = [f'{input_folder}\\clahe_binarize\\{f}' for f in sorted(os.listdir(f'{input_folder}\\clahe_binarize')) if f.endswith("clahe.npy")]
-    binarized_masks = [f'{input_folder}\\clahe_binarize\\{f}' for f in sorted(os.listdir(f'{input_folder}\\clahe_binarize')) if f.endswith("binarized.npy")]
-    neuropil_masks = [f'{input_folder}\\neuropils\\{f}' for f in sorted(os.listdir(f'{input_folder}\\neuropils')) if f.endswith(".tif")]
+    video_folders = get_video_folders(input_folder)
 
-    os.makedirs('outputs', exist_ok=True)
+    for vf in video_folders:
+        folder = vf['folder']
+        base = vf['base']
 
-    fig1, ax1 = plt.subplots(4, 1, figsize=(16,8), sharex=True, sharey=True)
-    fig2, ax2 = plt.subplots(4, 1, figsize=(16,8), sharex=True, sharey=True)
-    fig3, ax3 = plt.subplots(4, 1, figsize=(16,8), sharex=True, sharey=True)
+        video_path = os.path.join(folder, f"{base}.tif")
+        avg_path = os.path.join(folder, f"AVG_{base}.tif")
+        clahe_path = os.path.join(folder, f"AVG_{base}_clahe.npy")
+        binarized_path = os.path.join(folder, f"AVG_{base}_binarized.npy")
+        neuropil_path = os.path.join(folder, f"{base}_neuropils.tif")
 
-    for i in range(4):
-        data = tifffile.imread(tif_videos[i])
-        avg_data = tifffile.imread(avg_images[i])
-        clahe_image = np.load(clahe_images[i])
-        binarized = np.load(binarized_masks[i])
-        neuropils = tifffile.imread(neuropil_masks[i])
+        data = tifffile.imread(video_path)
+        avg_data = tifffile.imread(avg_path)
+        clahe_image = np.load(clahe_path)
+        binarized = np.load(binarized_path)
+        neuropils = tifffile.imread(neuropil_path)
 
-        title = os.path.splitext(os.path.basename(tif_videos[i]))[0]
+        title = base
 
-        total = np.mean(data, axis=(1,2))
+        total = np.mean(data, axis=(1, 2))
         total = (total - np.median(total)) / np.median(total)
-        ax1[i].plot(total)
-        ax1[i].set_title(title)
 
         label_to_name = label_neuropils(neuropils)
-        traces = neuropil_traces(data, neuropils, label_to_name)
-        for name, dff in traces.items():
-            ax2[i].plot(dff, label=name)
-        ax2[i].set_title(title)
-        ax2[i].legend()
+        neuropil_dff = neuropil_traces(data, neuropils, label_to_name)
 
-        # quadrant activity, one figure per video
+        bright, dark = binarized_traces(data, binarized)
+
+        # one combined plot per video: total activity, all neuropils, and
+        # binarized bright/dark all overlaid together as separate lines
+        fig, ax = plt.subplots(figsize=(16, 6))
+        ax.plot(total, label='total', color='black', linewidth=1.8)
+        for name, dff in neuropil_dff.items():
+            ax.plot(dff, label=name, linewidth=1.2)
+        ax.plot(bright, label='bright', linestyle='--', linewidth=1.2)
+        ax.plot(dark, label='dark', linestyle='--', linewidth=1.2)
+        ax.set_title(title)
+        ax.set_xlabel('frame')
+        ax.set_ylabel('dF/F')
+        ax.legend(fontsize=8)
+        fig.tight_layout()
+        fig.savefig(os.path.join(folder, f"{base}_activity.svg"))
+        plt.close(fig)
+
+        # quadrant activity - saved into this video's own subfolder
         cell_traces = grid_traces(data, n=4)
         quad_fig = quadrant_plot(title, cell_traces, n=4)
-        quad_fig.savefig(f'outputs/{title}_quadrants.svg')
+        quad_fig.savefig(os.path.join(folder, f"{base}_quadrants.svg"))
         plt.close(quad_fig)
 
-        # binarized threshold: bright vs dark activity
-        bright, dark = binarized_traces(data, binarized)
-        ax3[i].plot(bright, label='bright')
-        ax3[i].plot(dark, label='dark')
-        ax3[i].set_title(title)
-        ax3[i].legend()
-
-    fig1.tight_layout()
-    fig1.savefig('outputs/total_activity.svg')
-
-    fig2.tight_layout()
-    fig2.savefig('outputs/neuropil_activity.svg')
-
-    fig3.tight_layout()
-    fig3.savefig('outputs/binarized_activity.svg')
+        print(f'activity done: {folder}')

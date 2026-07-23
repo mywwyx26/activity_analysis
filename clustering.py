@@ -8,6 +8,7 @@ from scipy.cluster.hierarchy import linkage, leaves_list, fcluster
 from scipy.spatial.distance import squareform
 from scipy.signal import find_peaks
 from sklearn.metrics import silhouette_samples
+from removebg import get_video_folders
 
 
 def pixel_findroi(data, filename, output="clustered"):
@@ -227,12 +228,14 @@ def pixel_findroi(data, filename, output="clustered"):
 
 if __name__ == "__main__":
     input_folder = "C:\\Users\\megan\\flies\\activity_analysis"
-    tif_videos = [f'{input_folder}\\registered\\{f}' for f in sorted(os.listdir(f'{input_folder}\\registered')) if f.endswith(".tif")]
-    os.makedirs('clustered', exist_ok=True)
+    video_folders = get_video_folders(input_folder)
 
-    for i in range(4):
-        data = zoom(gaussian_filter(tifffile.imread(tif_videos[i]), sigma=(0, 1, 1)), zoom=(1, 0.25, 0.25), order=1, prefilter=True)
+    for vf in video_folders:
+        video_path = os.path.join(vf['folder'], f"{vf['base']}.tif")
+        data = zoom(gaussian_filter(tifffile.imread(video_path), sigma=(0, 1, 1)),
+                    zoom=(1, 0.25, 0.25), order=1, prefilter=True)
 
-        filename = os.path.splitext(os.path.basename(tif_videos[i]))[0]
-        pixel_findroi(data, filename=filename, output='clustered')
-        print(f'pixel clustering done: {filename}')
+        # outputs (clusters_over_time, groups_and_matrix, silhouette svgs) are
+        # saved directly into this video's own subfolder, not a shared 'clustered' folder
+        pixel_findroi(data, filename=vf['base'], output=vf['folder'])
+        print(f'pixel clustering done: {vf["folder"]}')
