@@ -10,6 +10,8 @@ from scipy.signal import find_peaks
 from sklearn.metrics import silhouette_samples
 from removebg import get_video_folders
 
+SAMPLE_RATE_HZ = 10  # all recordings were captured at 10 Hz
+
 
 def pixel_findroi(data, filename, output="clustered"):
     start = time.perf_counter()
@@ -135,9 +137,9 @@ def pixel_findroi(data, filename, output="clustered"):
         else:
             colors.append((0.3, 0.3, 0.3, 1.0))
 
-    print(f"\nClustering results for {filename}:")
+    print(f"Clustering results for {filename}:")
     print(f"  best k={best_k} (mean silhouette={best_score:.4f})")
-    print(f"  clusters: {n_real}  |  noise pixels: {noise_count} (incl. {n_small_cluster_pixels} from clusters <{min_cluster_size}px)  |  total clustered: {num_features}  |  excluded dead: {n_dead}")
+    print(f"  clusters: {n_real}  |  noise pixels: {noise_count} (incl. {n_small_cluster_pixels} from clusters <{min_cluster_size}px)  |  total clustered: {num_features}  |  excluded dead: {n_dead}\n")
 
     groups = [[] for _ in range(n_clusters)]
     for cluster_idx in range(n_clusters):
@@ -153,11 +155,13 @@ def pixel_findroi(data, filename, output="clustered"):
     if n_plots == 1:
         axes1 = [axes1]  # keep indexing consistent when there's only one subplot
 
+    t = np.arange(deltaf.shape[1]) / SAMPLE_RATE_HZ
+
     for plot_pos, real_idx in enumerate(active_real_clusters):
         pixel_indices = np.where(cluster_labels == real_idx)[0]
         ax = axes1[plot_pos]
         avg_trace = np.mean(deltaf[pixel_indices], axis=0)
-        ax.plot(avg_trace, color=colors[real_idx], linewidth=1.5)
+        ax.plot(t, avg_trace, color=colors[real_idx], linewidth=1.5)
         ax.set_ylabel(f'C{plot_pos+1}\n(n={len(pixel_indices)})', fontsize=7, rotation=0, labelpad=35)
         is_last = (plot_pos == n_plots - 1)
         ax.tick_params(labelbottom=is_last)
@@ -166,9 +170,11 @@ def pixel_findroi(data, filename, output="clustered"):
         noise_indices = np.where(cluster_labels >= n_real)[0]
         ax = axes1[n_plots - 1]
         avg_trace = np.mean(deltaf[noise_indices], axis=0)
-        ax.plot(avg_trace, color=(0.3, 0.3, 0.3, 1.0), linewidth=1.5)
+        ax.plot(t, avg_trace, color=(0.3, 0.3, 0.3, 1.0), linewidth=1.5)
         ax.set_ylabel(f'Noise\n(n={len(noise_indices)})', fontsize=7, rotation=0, labelpad=35)
         ax.tick_params(labelbottom=True)
+
+    axes1[-1].set_xlabel('time (s)')
 
     fig1.savefig(os.path.join(output, f"{filename}_clusters_over_time.svg"))
     plt.close(fig1)

@@ -4,6 +4,14 @@ import matplotlib.pyplot as plt
 import tifffile
 from removebg import get_video_folders
 
+SAMPLE_RATE_HZ = 10  # all recordings were captured at 10 Hz
+
+
+def frame_times(n_frames, sample_rate_hz=SAMPLE_RATE_HZ):
+    """Returns the time (in seconds) for each of n_frames, given the sample rate."""
+    return np.arange(n_frames) / sample_rate_hz
+
+
 def label_neuropils(neuropil_mask):
     """
     neuropil_mask: (y, x) with integer labels for each neuropil region (0 = background)
@@ -81,11 +89,15 @@ def quadrant_plot(fig_title, cell_traces, n=4):
     fig, axes = plt.subplots(4, 1, figsize=(12, 8), sharex=True, sharey=True)
     axes = axes.ravel()
 
+    any_trace = next(iter(cell_traces.values()))
+    t = frame_times(len(any_trace))
+
     for ax, (name, cells) in zip(axes, quadrants.items()):
         for (r, c) in cells:
-            ax.plot(cell_traces[(r, c)], label=f'cell ({r},{c})')
+            ax.plot(t, cell_traces[(r, c)], label=f'cell ({r},{c})')
         ax.set_title(name)
         ax.legend(fontsize=7)
+    axes[-1].set_xlabel('time (s)')
 
     fig.suptitle(fig_title)
     fig.tight_layout()
@@ -141,18 +153,31 @@ if __name__ == "__main__":
 
         bright, dark = binarized_traces(data, binarized)
 
-        # one combined plot per video: total activity, all neuropils, and
-        # binarized bright/dark all overlaid together as separate lines
-        fig, ax = plt.subplots(figsize=(16, 6))
-        ax.plot(total, label='total', color='black', linewidth=1.8)
+        # one figure per video, split into 3 subplots (same split as before):
+        # total activity, all neuropils, and binarized bright/dark
+        fig, (ax_total, ax_neuropil, ax_binarized) = plt.subplots(
+            3, 1, figsize=(16, 10), sharex=True, sharey=True
+        )
+
+        t = frame_times(len(total))
+
+        ax_total.plot(t, total, color='black', linewidth=1.5)
+        ax_total.set_title(f'{title} - total activity')
+        ax_total.set_ylabel('dF/F')
+
         for name, dff in neuropil_dff.items():
-            ax.plot(dff, label=name, linewidth=1.2)
-        ax.plot(bright, label='bright', linestyle='--', linewidth=1.2)
-        ax.plot(dark, label='dark', linestyle='--', linewidth=1.2)
-        ax.set_title(title)
-        ax.set_xlabel('frame')
-        ax.set_ylabel('dF/F')
-        ax.legend(fontsize=8)
+            ax_neuropil.plot(t, dff, label=name, linewidth=1.2)
+        ax_neuropil.set_title('neuropil activity')
+        ax_neuropil.set_ylabel('dF/F')
+        ax_neuropil.legend(fontsize=8)
+
+        ax_binarized.plot(t, bright, label='bright', linewidth=1.2)
+        ax_binarized.plot(t, dark, label='dark', linewidth=1.2)
+        ax_binarized.set_title('binarized activity')
+        ax_binarized.set_xlabel('time (s)')
+        ax_binarized.set_ylabel('dF/F')
+        ax_binarized.legend(fontsize=8)
+
         fig.tight_layout()
         fig.savefig(os.path.join(folder, f"{base}_activity.svg"))
         plt.close(fig)
