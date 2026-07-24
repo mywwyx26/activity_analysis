@@ -19,6 +19,14 @@ def label_neuropils(neuropil_mask):
         medulla       -> bottom right
         lobula        -> top right
         lobula plate  -> top left
+
+    Corners are resolved in a fixed priority order (medulla, then lobula,
+    then lobula plate): whichever remaining label is nearest to the current
+    corner gets claimed first, then removed from consideration for the
+    corners still to come. This one-to-one assignment prevents a label from
+    winning two different corners (which would otherwise silently overwrite
+    an earlier assignment in the output dict, making a region's name
+    disappear), while still resolving ties in the requested priority order.
     """
     y_size, x_size = neuropil_mask.shape
     labels = [l for l in np.unique(neuropil_mask) if l != 0]
@@ -32,13 +40,19 @@ def label_neuropils(neuropil_mask):
     label_coords = {label: np.where(neuropil_mask == label) for label in labels}
 
     label_to_name = {}
-    for name, (cy, cx) in corners.items():
+    remaining_labels = set(labels)
+
+    for name, (cy, cx) in corners.items():  # medulla, then lobula, then lobula plate
+        if not remaining_labels:
+            break
         min_dists = {}
-        for label, (ys, xs) in label_coords.items():
+        for label in remaining_labels:
+            ys, xs = label_coords[label]
             dists = np.hypot(ys - cy, xs - cx)
             min_dists[label] = dists.min()
         closest_label = min(min_dists, key=min_dists.get)
         label_to_name[closest_label] = name
+        remaining_labels.discard(closest_label)
 
     return label_to_name
 
