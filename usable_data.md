@@ -31,10 +31,10 @@
 | fly2_visual_XY0_Z0_T0000_C0.tif | No | - | - | - |
 | fly3_less_than24hr_post_XY0_Z0_T0000_C0.tif | Yes | 0 | 3000 | Affine |
 | fly3_less_than24hr_visual_XY0_Z0_T0000_C0.tif | Yes | 999 | 1799 | Affine |
-| Stream to disk - 1_XY0_Z0_T0000_C0_0316-1.tif |  | 300 | 3300 | Affine |
-| Stream to disk - 1_XY0_Z0_T0000_C0_0316-2.tif |  | 0 | 1700 | Affine |
-| Stream to disk - 1_XY0_Z0_T0000_C0_0316-3.tif |  |  |  |  |
+| Stream to disk - 1_XY0_Z0_T0000_C0_0316-1.tif | Yes | 300 | 3300 | Affine |
+| Stream to disk - 1_XY0_Z0_T0000_C0_0316-2.tif | Yes | 0 | 1700 | Affine |
+| Stream to disk - 1_XY0_Z0_T0000_C0_0316-3.tif | Yes | 0 | 2738 | Affine |
 | Stream to disk - 1_XY0_Z0_T0000_C0_0317.tif | No | - | - | - |
 | Stream to disk_XY0_Z0_T0000_C0_0316-1.tif | Yes | 0 | 1400 | Affine |
-| Stream to disk_XY0_Z0_T0000_C0_0316-2.tif |  | 368 | 2668 | Affine |
+| Stream to disk_XY0_Z0_T0000_C0_0316-2.tif | Yes | 368 | 2668 | Affine |
 | Stream to disk_XY0_Z0_T0000_C0_0317.tif | No | - | - | - |
