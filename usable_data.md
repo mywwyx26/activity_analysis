@@ -1,9 +1,9 @@
-| File name | Usable? | Start Frame | End Frame | Transform |
-| --- | --- | --- | --- |
-| fly1_less_than24hr_pre_dark_XY0_Z0_T0000_C0.tif | Yes | 1560 | 3000 | Rigid |
-| fly2_less_than24hr_pre_dark_XY0_Z0_T0000_C0.tif | Yes | 851 | 2851 | Rigid |
-| fly3_less_than24hr_pre_dark_1_XY0_Z0_T0000_C0.tif | Yes | 1800 | 3000 | Rigid |
-| fly3_less_than24hr_pre_dark_2_XY0_Z0_T0000_C0.tif | Yes | 0 | 3000 | Rigid |
+| File Name | Usable? | Start Frame | End Frame | Transform |
+| --- | --- | --- | --- | --- |
+| fly1_less_than24hr_pre_dark_XY0_Z0_T0000_C0.tif | Yes | 1560 | 3000 | Affine |
+| fly2_less_than24hr_pre_dark_XY0_Z0_T0000_C0.tif | Yes | 850 | 2450 | Affine |
+| fly3_less_than24hr_pre_dark_1_XY0_Z0_T0000_C0.tif | Yes | 1800 | 3000 | Affine |
+| fly3_less_than24hr_pre_dark_2_XY0_Z0_T0000_C0.tif | Yes | 0 | 3000 | Affine |
 | fly_1_dark_post_XY0_Z0_T0000_C0.tif | No | - | - | - |
 | fly_1_dark_pre_XY0_Z0_T0000_C0.tif | Yes | 1000 | 3000 | Affine |
 | fly_1_post_XY0_Z0_T0000_C0.tif | Yes | 1700 | 3000 | Affine |

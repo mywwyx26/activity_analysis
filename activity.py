@@ -146,13 +146,13 @@ if __name__ == "__main__":
         base = vf['base']
 
         video_path = os.path.join(folder, f"{base}.tif")
-        avg_path = os.path.join(folder, f"AVG_{base}.tif")
+        avg_path = os.path.join(folder, f"AVG_{base}.npy")
         clahe_path = os.path.join(folder, f"AVG_{base}_clahe.npy")
         binarized_path = os.path.join(folder, f"AVG_{base}_binarized.npy")
         neuropil_path = os.path.join(folder, f"{base}_neuropils.tif")
 
         data = tifffile.imread(video_path)
-        avg_data = tifffile.imread(avg_path)
+        avg_data = np.load(avg_path)
         clahe_image = np.load(clahe_path)
         binarized = np.load(binarized_path)
         neuropils = tifffile.imread(neuropil_path)
