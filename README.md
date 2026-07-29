@@ -1,5 +1,5 @@
 # activity_analysis
-analysis of 4 files to get activity
+analysis of files to get activity
 
 ---
 
